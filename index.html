@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Galon Oxy Water - Admin Portal</title>
+
+  <!-- Google Fonts & Tailwind CSS -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Chart.js & FontAwesome -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Leaflet CSS & JS untuk Peta -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    body { font-family: 'Poppins', sans-serif; background-color: #f4f7fe; }
+    .glass-card { background: #ffffff; border-radius: 16px; box-shadow: 0 4px 20px -2px rgba(0,0,0,0.03); border: 1px solid #e2e8f0; }
+    .sidebar-btn { transition: all 0.25s ease; }
+    .sidebar-btn.active { background: #e0f2fe; color: #0284c7; font-weight: 600; border-right: 4px solid #0284c7; }
+    .sidebar-btn:hover:not(.active) { background: #f1f5f9; }
+    .page-section { display: none; animation: fadeIn 0.3s ease-in-out; }
+    .page-section.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .table-responsive::-webkit-scrollbar { height: 6px; }
+    .table-responsive::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    #mapContainer { z-index: 10; }
+  </style>
+</head>
+<body class="text-slate-800">
+
+  <!-- Sidebar -->
+  <aside id="sidebar" class="fixed inset-y-0 left-0 bg-white w-64 border-r border-slate-200 z-50 transform -translate-x-full md:translate-x-0 transition-transform duration-300">
+    <div class="h-20 flex items-center px-6 border-b border-slate-100">
+      <div class="w-9 h-9 rounded-xl bg-sky-500 text-white flex items-center justify-center text-lg font-bold mr-3 shadow-md">
+        <i class="fas fa-tint"></i>
+      </div>
+      <h1 class="text-lg font-bold text-slate-800 tracking-wide">Oxy<span class="text-sky-500">Water</span></h1>
+    </div>
+    
+    <nav class="mt-6 px-3 space-y-1.5">
+      <button onclick="showPage('dashboard', this)" class="sidebar-btn active w-full flex items-center px-4 py-3 text-slate-600 rounded-xl text-left">
+        <i class="fas fa-chart-pie w-6 text-center mr-2"></i> Dashboard
+      </button>
+      <button onclick="showPage('member', this)" class="sidebar-btn w-full flex items-center px-4 py-3 text-slate-600 rounded-xl text-left">
+        <i class="fas fa-id-card w-6 text-center mr-2"></i> Data Member
+      </button>
+      <button onclick="showPage('delivery', this)" class="sidebar-btn w-full flex items-center px-4 py-3 text-slate-600 rounded-xl text-left">
+        <i class="fas fa-truck w-6 text-center mr-2"></i> Pemesanan Galon
+      </button>
+      <button onclick="showPage('report', this)" class="sidebar-btn w-full flex items-center px-4 py-3 text-slate-600 rounded-xl text-left">
+        <i class="fas fa-file-invoice-dollar w-6 text-center mr-2"></i> Laporan Lengkap
+      </button>
+    </nav>
+  </aside>
+
+  <!-- Content Container -->
+  <main class="md:ml-64 p-4 lg:p-8 min-h-screen">
+    
+    <!-- Mobile Navigation Header -->
+    <div class="md:hidden flex items-center justify-between bg-white p-4 rounded-2xl shadow-sm mb-6 border border-slate-200">
+      <div class="flex items-center">
+        <i class="fas fa-tint text-sky-500 text-xl mr-2"></i>
+        <h1 class="text-lg font-bold text-slate-800">OxyWater</h1>
+      </div>
+      <button onclick="toggleSidebar()" class="p-2 text-slate-600 hover:text-sky-500">
+        <i class="fas fa-bars text-xl"></i>
+      </button>
+    </div>
+
+    <!-- ================= DASHBOARD PAGE ================= -->
+    <section id="dashboard" class="page-section active">
+      <header class="mb-6">
+        <h2 class="text-2xl lg:text-3xl font-bold text-slate-800">Dashboard Utama</h2>
+        <p class="text-slate-500 text-sm mt-1">Ringkasan performa dan data penjualan Galon Oxy Water</p>
+      </header>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+        <div class="glass-card p-5">
+          <div class="flex justify-between items-center">
+            <div>
+              <p class="text-xs text-slate-500 font-semibold uppercase tracking-wider">Total Member</p>
+              <h3 class="text-2xl font-bold text-slate-800 mt-1" id="dashTotalMember">-</h3>
+            </div>
+            <div class="p-3 bg-sky-50 text-sky-500 rounded-xl"><i class="fas fa-users text-lg"></i></div>
+          </div>
+          <p class="text-xs text-sky-600 mt-3 font-medium" id="dashMembershipIncome">Omset Member: Rp 0</p>
+        </div>
+
+        <div class="glass-card p-5">
+          <div class="flex justify-between items-center">
+            <div>
+              <p class="text-xs text-slate-500 font-semibold uppercase tracking-wider">Total Transaksi</p>
+              <h3 class="text-2xl font-bold text-slate-800 mt-1" id="dashTotalPengantaran">-</h3>
+            </div>
+            <div class="p-3 bg-indigo-50 text-indigo-500 rounded-xl"><i class="fas fa-shipping-fast text-lg"></i></div>
+          </div>
+          <p class="text-xs text-slate-400 mt-3">Pemesanan diurutkan terbaru</p>
+        </div>
+
+        <div class="glass-card p-5">
+          <div class="flex justify-between items-center">
+            <div>
+              <p class="text-xs text-slate-500 font-semibold uppercase tracking-wider">Total Galon Terjual</p>
+              <h3 class="text-2xl font-bold text-slate-800 mt-1" id="dashTotalGalon">-</h3>
+            </div>
+            <div class="p-3 bg-emerald-50 text-emerald-500 rounded-xl"><i class="fas fa-box text-lg"></i></div>
+          </div>
+          <p class="text-xs text-slate-400 mt-3">Akumulasi seluruh pesanan</p>
+        </div>
+
+        <div class="glass-card p-5 bg-gradient-to-br from-sky-500 to-indigo-600 text-white relative overflow-hidden">
+          <div class="relative z-10">
+            <p class="text-xs text-sky-100 font-semibold uppercase tracking-wider">Grand Total Omset</p>
+            <h3 class="text-2xl font-bold mt-1" id="dashGrandTotal">Rp 0</h3>
+            <p class="text-[11px] text-sky-200 mt-2" id="dashOmsetDetail">Galon + Membership</p>
+          </div>
+          <i class="fas fa-wallet absolute -bottom-3 -right-2 text-6xl text-white opacity-15"></i>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="glass-card p-6 lg:col-span-2">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-bold text-slate-800">Tren Penjualan Galon Harian</h3>
+            <span class="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full font-medium">Harian</span>
+          </div>
+          <div class="relative h-72">
+            <canvas id="chartHistory"></canvas>
+          </div>
+        </div>
+
+        <div class="glass-card p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-bold text-slate-800">Top Member Terbanyak</h3>
+            <span class="text-xs bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full font-medium">Keseluruhan</span>
+          </div>
+          <div class="relative h-72">
+            <canvas id="chartTopMember"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= MEMBER PAGE ================= -->
+    <section id="member" class="page-section">
+      <header class="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-2xl lg:text-3xl font-bold text-slate-800">Data Member</h2>
+          <p class="text-slate-500 text-sm mt-1">Daftar keanggotaan aktif dan grafik aktivitasnya</p>
+        </div>
+        <div class="relative">
+          <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+          <input type="text" id="searchMember" onkeyup="filterMember()" placeholder="Cari nama member..." class="pl-11 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500 w-full md:w-64 text-sm shadow-sm">
+        </div>
+      </header>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div class="glass-card p-6">
+          <h3 class="font-bold text-slate-800 mb-4">Persebaran Member per Lokasi (Tertinggi)</h3>
+          <div class="relative h-60">
+            <canvas id="chartMemberPage"></canvas>
+          </div>
+        </div>
+        
+        <div class="glass-card p-6">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="font-bold text-slate-800">Peta Lokasi Member</h3>
+            <span class="text-xs text-slate-500 font-medium">Titik Persebaran Wilayah</span>
+          </div>
+          <div id="mapContainer" class="relative h-60 rounded-xl overflow-hidden border border-slate-200 bg-slate-50"></div>
+        </div>
+      </div>
+
+      <div class="glass-card overflow-hidden">
+        <div class="table-responsive overflow-x-auto">
+          <table class="w-full text-left whitespace-nowrap">
+            <thead class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider font-semibold border-b border-slate-100">
+              <tr>
+                <th class="px-6 py-4">No</th>
+                <th class="px-6 py-4">Nama</th>
+                <th class="px-6 py-4">Anggota Keluarga</th>
+                <th class="px-6 py-4">Alamat</th>
+                <th class="px-6 py-4">No. HP</th>
+                <th class="px-6 py-4">Keterangan</th>
+                <th class="px-6 py-4">Bukti Transaksi</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyMember" class="divide-y divide-slate-100 text-sm">
+              <tr><td colspan="7" class="px-6 py-10 text-center text-slate-400">Memuat data member...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= DELIVERY PAGE ================= -->
+    <section id="delivery" class="page-section">
+      <header class="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-2xl lg:text-3xl font-bold text-slate-800">Data Pemesanan Galon</h2>
+          <p class="text-slate-500 text-sm mt-1">Daftar transaksi diurutkan dari yang terbaru</p>
+        </div>
+        <div class="relative">
+          <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+          <input type="text" id="searchDelivery" onkeyup="filterDelivery()" placeholder="Cari nama atau alamat..." class="pl-11 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500 w-full md:w-64 text-sm shadow-sm">
+        </div>
+      </header>
+
+      <div class="glass-card overflow-hidden">
+        <div class="table-responsive overflow-x-auto">
+          <table class="w-full text-left whitespace-nowrap">
+            <thead class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider font-semibold border-b border-slate-100">
+              <tr>
+                <th class="px-6 py-4">No</th>
+                <th class="px-6 py-4">Tanggal</th>
+                <th class="px-6 py-4">Nama</th>
+                <th class="px-6 py-4">Alamat</th>
+                <th class="px-6 py-4 text-center">Jumlah Galon</th>
+                <th class="px-6 py-4 text-right">Harga / Galon</th>
+                <th class="px-6 py-4 text-center">Sudah Bayar</th>
+                <th class="px-6 py-4 text-center">Belum Bayar</th>
+                <th class="px-6 py-4 text-right">Total Omset</th>
+                <th class="px-6 py-4 text-center">Keterangan</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyDelivery" class="divide-y divide-slate-100 text-sm">
+              <tr><td colspan="10" class="px-6 py-10 text-center text-slate-400">Memuat data pemesanan...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= REPORT PAGE ================= -->
+    <section id="report" class="page-section">
+      <header class="mb-6 flex items-center justify-between">
+        <div>
+          <h2 class="text-2xl lg:text-3xl font-bold text-slate-800">Laporan Penjualan Lengkap</h2>
+          <p class="text-slate-500 text-sm mt-1">Rincian Omset Harian, Membership, dan Top Pembeli Bulanan</p>
+        </div>
+        <button onclick="window.print()" class="hidden md:flex items-center bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-xl text-xs font-semibold transition-colors">
+          <i class="fas fa-print mr-2"></i> Cetak Laporan
+        </button>
+      </header>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+        <div class="glass-card p-5">
+          <p class="text-xs text-slate-500 font-semibold uppercase">Total Pemesanan</p>
+          <h3 class="text-2xl font-bold text-slate-800 mt-1" id="reportTx">-</h3>
+        </div>
+        <div class="glass-card p-5">
+          <p class="text-xs text-slate-500 font-semibold uppercase">Total Volume Galon</p>
+          <h3 class="text-2xl font-bold text-slate-800 mt-1" id="reportGalon">-</h3>
+        </div>
+        <div class="glass-card p-5">
+          <p class="text-xs text-slate-500 font-semibold uppercase">Omset Membership</p>
+          <h3 class="text-2xl font-bold text-sky-600 mt-1" id="reportMembershipIncome">Rp 0</h3>
+        </div>
+        <div class="glass-card p-5">
+          <p class="text-xs text-slate-500 font-semibold uppercase">Omset Galon</p>
+          <h3 class="text-2xl font-bold text-emerald-600 mt-1" id="reportIncome">Rp 0</h3>
+        </div>
+      </div>
+
+      <div id="monthlyReportContainer" class="space-y-6">
+        <!-- Monthly cards injected via JS -->
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    let memberData = [];
+    let deliveryData = [];
+    let dashboardSummary = {};
+    let reportSummary = {};
+    let chartInstances = {};
+    
+    let mapInstance = null;
+    let markerLayer = null;
+
+    const MEMBERSHIP_PRICE = 250000;
+
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx5wK4SjG1L-I1fgXeeHwcy12R9svRc-EtjWjL2djJYH5CjXytyGCbkePkUGb-miW0/exec";
+
+    function rupiah(val) {
+      return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val || 0);
+    }
+
+    function cleanName(name) {
+      if (!name) return '';
+      let v = String(name).toLowerCase().trim();
+      v = v.replace(/\bpak\b/g, '').replace(/\bbapak\b/g, '').replace(/\bibu\b/g, '')
+           .replace(/\bbu\b/g, '').replace(/\bteh\b/g, '').replace(/\bkak\b/g, '')
+           .replace(/\bpa\b/g, '');
+      return v.replace(/\([^)]*\)/g, '').replace(/[.,]/g, ' ').replace(/\s+/g, ' ').trim();
+    }
+
+    function parseDateDMY(dateStr) {
+      if (!dateStr) return new Date(0);
+      const parts = String(dateStr).trim().split('/');
+      if (parts.length === 3) {
+        const day = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1;
+        const year = parseInt(parts[2], 10);
+        return new Date(year, month, day);
+      }
+      return new Date(0);
+    }
+
+    function toggleSidebar() {
+      const sb = document.getElementById('sidebar');
+      sb.classList.toggle('-translate-x-full');
+    }
+
+    function showPage(pageId, btn) {
+      document.querySelectorAll('.page-section').forEach(el => el.classList.remove('active'));
+      document.getElementById(pageId).classList.add('active');
+
+      document.querySelectorAll('.sidebar-btn').forEach(el => el.classList.remove('active'));
+      if(btn) btn.classList.add('active');
+
+      if (window.innerWidth < 768) {
+        document.getElementById('sidebar').classList.add('-translate-x-full');
+      }
+
+      if (pageId === 'member' && mapInstance) {
+        setTimeout(() => {
+          mapInstance.invalidateSize();
+        }, 300);
+      }
+    }
+
+    // ================= FUNGSI FETCH UNTUK VERCEL =================
+
+    function loadDashboard() {
+      fetch(`${SCRIPT_URL}?action=getDashboard`)
+        .then(res => res.json())
+        .then(data => {
+          dashboardSummary = data;
+          document.getElementById('dashTotalMember').innerText = data.totalMember || 0;
+          document.getElementById('dashTotalPengantaran').innerText = data.totalPengantaran || 0;
+          document.getElementById('dashTotalGalon').innerText = data.totalGalon || 0;
+
+          const membershipIncome = (data.totalMember || 0) * MEMBERSHIP_PRICE;
+          const grandTotal = (data.totalPendapatan || 0) + membershipIncome;
+
+          document.getElementById('dashMembershipIncome').innerText = 'Omset Member: ' + rupiah(membershipIncome);
+          document.getElementById('dashGrandTotal').innerText = rupiah(grandTotal);
+          document.getElementById('dashOmsetDetail').innerText = 'Galon (' + rupiah(data.totalPendapatan) + ') + Member (' + rupiah(membershipIncome) + ')';
+        })
+        .catch(err => console.error("Error loading dashboard:", err));
+    }
+
+    function loadMembers() {
+      fetch(`${SCRIPT_URL}?action=getMembers`)
+        .then(res => res.json())
+        .then(data => {
+          memberData = data || [];
+          renderMembers(memberData);
+          updateCharts();
+        })
+        .catch(err => {
+          document.getElementById('tbodyMember').innerHTML = `<tr><td colspan="7" class="px-6 py-4 text-center text-red-500">${err.message}</td></tr>`;
+        });
+    }
+
+    function loadDeliveries() {
+      fetch(`${SCRIPT_URL}?action=getDeliveries`)
+        .then(res => res.json())
+        .then(data => {
+          deliveryData = data || [];
+          deliveryData.sort((a, b) => parseDateDMY(b.tanggal) - parseDateDMY(a.tanggal));
+          
+          renderDeliveries(deliveryData);
+          renderMonthlyReportCards(deliveryData);
+          updateCharts();
+        })
+        .catch(err => {
+          document.getElementById('tbodyDelivery').innerHTML = `<tr><td colspan="10" class="px-6 py-4 text-center text-red-500">${err.message}</td></tr>`;
+        });
+    }
+
+    function loadReport() {
+      fetch(`${SCRIPT_URL}?action=getReport`)
+        .then(res => res.json())
+        .then(data => {
+          reportSummary = data;
+          document.getElementById('reportTx').innerText = data.totalTransaksi || 0;
+          document.getElementById('reportGalon').innerText = data.totalGalon || 0;
+          document.getElementById('reportIncome').innerText = rupiah(data.pendapatan);
+        })
+        .catch(err => console.error("Error loading report:", err));
+    }
+
+    // ================= FUNGSI TAMPILAN (TETAP SAMA) =================
+
+    function renderMembers(data) {
+      const tbody = document.getElementById('tbodyMember');
+      if (!data || !data.length) {
+        tbody.innerHTML = `<tr><td colspan="7" class="px-6 py-8 text-center text-slate-400">Belum ada data member.</td></tr>`;
+        return;
+      }
+
+      let html = '';
+      data.forEach((row, index) => {
+        html += `
+          <tr class="hover:bg-slate-50/80 transition-colors">
+            <td class="px-6 py-4 font-medium text-slate-400">${index + 1}</td>
+            <td class="px-6 py-4 font-semibold text-slate-800">${row.nama || '-'}</td>
+            <td class="px-6 py-4 text-slate-600">${row.anggota || '-'}</td>
+            <td class="px-6 py-4 text-slate-600">${row.alamat || '-'}</td>
+            <td class="px-6 py-4 text-slate-600">${row.noHp || '-'}</td>
+            <td class="px-6 py-4">
+              <span class="px-3 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
+                ${row.keterangan || 'LUNAS'}
+              </span>
+            </td>
+            <td class="px-6 py-4 text-slate-500">${row.bukti || '-'}</td>
+          </tr>
+        `;
+      });
+      tbody.innerHTML = html;
+    }
+
+    function filterMember() {
+      const kw = document.getElementById('searchMember').value.toLowerCase();
+      const filtered = memberData.filter(m => String(m.nama).toLowerCase().includes(kw));
+      renderMembers(filtered);
+    }
+
+    function renderDeliveries(data) {
+      const tbody = document.getElementById('tbodyDelivery');
+      if (!data || !data.length) {
+        tbody.innerHTML = `<tr><td colspan="10" class="px-6 py-8 text-center text-slate-400">Belum ada data pemesanan.</td></tr>`;
+        return;
+      }
+
+      let html = '';
+      data.forEach((row, index) => {
+        const isMember = String(row.keterangan).toLowerCase().includes('member');
+        const badgeClass = isMember ? 'bg-sky-100 text-sky-700 border-sky-200' : 'bg-slate-100 text-slate-600 border-slate-200';
+
+        html += `
+          <tr class="hover:bg-slate-50/80 transition-colors">
+            <td class="px-6 py-4 font-medium text-slate-400">${index + 1}</td>
+            <td class="px-6 py-4 text-slate-600 font-medium">${row.tanggal || '-'}</td>
+            <td class="px-6 py-4 font-semibold text-slate-800">${row.nama || '-'}</td>
+            <td class="px-6 py-4 text-slate-600">${row.alamat || '-'}</td>
+            <td class="px-6 py-4 text-center font-bold text-slate-700">${row.jumlahGalon || 0}</td>
+            <td class="px-6 py-4 text-right text-slate-600">${rupiah(row.harga)}</td>
+            <td class="px-6 py-4 text-center text-slate-600">${row.sudahBayar || '-'}</td>
+            <td class="px-6 py-4 text-center text-slate-600">${row.belumBayar || '-'}</td>
+            <td class="px-6 py-4 text-right font-semibold text-slate-800">${rupiah(row.total)}</td>
+            <td class="px-6 py-4 text-center">
+              <span class="px-2.5 py-1 text-xs font-semibold rounded-lg border ${badgeClass}">
+                ${row.keterangan || '-'}
+              </span>
+            </td>
+          </tr>
+        `;
+      });
+      tbody.innerHTML = html;
+    }
+
+    function filterDelivery() {
+      const kw = document.getElementById('searchDelivery').value.toLowerCase();
+      const filtered = deliveryData.filter(d => 
+        String(d.nama).toLowerCase().includes(kw) || 
+        String(d.alamat).toLowerCase().includes(kw)
+      );
+      renderDeliveries(filtered);
+    }
+
+    function getAggregatedMemberPurchases() {
+      const totals = {};
+      memberData.forEach(m => {
+        if (m.nama) totals[m.nama] = 0;
+      });
+      deliveryData.forEach(d => {
+        const qty = Number(d.jumlahGalon || 0);
+        if (qty <= 0) return;
+        const delivNorm = cleanName(d.nama);
+        let matchedMemberName = null;
+        for (let m of memberData) {
+          const memNorm = cleanName(m.nama);
+          if (memNorm && delivNorm && (memNorm === delivNorm || memNorm.includes(delivNorm) || delivNorm.includes(memNorm))) {
+            matchedMemberName = m.nama;
+            break;
+          }
+        }
+        if (matchedMemberName) {
+          totals[matchedMemberName] = (totals[matchedMemberName] || 0) + qty;
+        } else if (d.nama) {
+          const rawName = d.nama.trim();
+          totals[rawName] = (totals[rawName] || 0) + qty;
+        }
+      });
+      const result = Object.keys(totals).map(name => ({
+        nama: name,
+        totalGalon: totals[name]
+      })).filter(item => item.totalGalon > 0);
+      result.sort((a, b) => b.totalGalon - a.totalGalon);
+      return result;
+    }
+
+    function updateCharts() {
+      if (!deliveryData.length) return;
+
+      Chart.defaults.font.family = 'Poppins';
+      Chart.defaults.color = '#64748b';
+
+      const dateMap = {};
+      const sortedForChart = [...deliveryData].reverse();
+      sortedForChart.forEach(d => {
+        if (d.tanggal) {
+          dateMap[d.tanggal] = (dateMap[d.tanggal] || 0) + Number(d.jumlahGalon || 0);
+        }
+      });
+      const dates = Object.keys(dateMap).slice(-12);
+      const galonCounts = dates.map(dt => dateMap[dt]);
+
+      if (chartInstances.history) chartInstances.history.destroy();
+      chartInstances.history = new Chart(document.getElementById('chartHistory'), {
+        type: 'line',
+        data: {
+          labels: dates,
+          datasets: [{
+            label: 'Galon Terjual',
+            data: galonCounts,
+            borderColor: '#0284c7',
+            backgroundColor: 'rgba(2, 132, 199, 0.08)',
+            borderWidth: 3,
+            fill: true,
+            tension: 0.35,
+            pointBackgroundColor: '#ffffff',
+            pointBorderColor: '#0284c7',
+            pointBorderWidth: 2,
+            pointRadius: 4
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true, grid: { borderDash: [4, 4] } }, x: { grid: { display: false } } }
+        }
+      });
+
+      const topMembers = getAggregatedMemberPurchases();
+      const top5 = topMembers.slice(0, 5);
+
+      if (chartInstances.topMember) chartInstances.topMember.destroy();
+      chartInstances.topMember = new Chart(document.getElementById('chartTopMember'), {
+        type: 'bar',
+        data: {
+          labels: top5.map(m => m.nama),
+          datasets: [{
+            label: 'Total Galon', data: top5.map(m => m.totalGalon),
+            backgroundColor: '#10b981', borderRadius: 8
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true, grid: { borderDash: [4, 4] } }, x: { grid: { display: false } } }
+        }
+      });
+
+      const lokasiCounts = {};
+      memberData.forEach(m => {
+        let rawAlamat = (m.alamat || '').trim();
+        if (!rawAlamat) rawAlamat = 'Tidak Diketahui';
+        
+        let formattedLokasi = rawAlamat.charAt(0).toUpperCase() + rawAlamat.slice(1);
+        let lower = rawAlamat.toLowerCase();
+        if (lower.includes('batan')) {
+          formattedLokasi = 'Batan Indah';
+        } else if (lower.includes('puspitek') || lower.includes('puspiptek') || lower.includes('pusitek')) {
+          formattedLokasi = 'Puspiptek';
+        }
+
+        lokasiCounts[formattedLokasi] = (lokasiCounts[formattedLokasi] || 0) + 1;
+      });
+
+      let lokasiArray = Object.keys(lokasiCounts).map(loc => ({
+        lokasi: loc,
+        count: lokasiCounts[loc]
+      }));
+
+      lokasiArray.sort((a, b) => b.count - a.count);
+
+      const lokasiLabels = lokasiArray.map(item => item.lokasi);
+      const lokasiValues = lokasiArray.map(item => item.count);
+
+      if (chartInstances.memberPage) chartInstances.memberPage.destroy();
+      chartInstances.memberPage = new Chart(document.getElementById('chartMemberPage'), {
+        type: 'bar',
+        data: {
+          labels: lokasiLabels,
+          datasets: [{
+            label: 'Jumlah Member',
+            data: lokasiValues,
+            backgroundColor: '#0ea5e9',
+            borderRadius: 8
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: { 
+            y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { borderDash: [4, 4] } }, 
+            x: { grid: { display: false } } 
+          }
+        }
+      });
+
+      if (!mapInstance) {
+        mapInstance = L.map('mapContainer').setView([-6.3475, 106.6660], 14);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap'
+        }).addTo(mapInstance);
+        markerLayer = L.layerGroup().addTo(mapInstance);
+      }
+      
+      markerLayer.clearLayers();
+
+      memberData.forEach(m => {
+        let alamat = (m.alamat || '').toLowerCase();
+        let baseLat, baseLng, color;
+
+        if (alamat.includes('batan')) {
+          baseLat = -6.3475; baseLng = 106.6690; color = '#10b981';
+        } else if (alamat.includes('puspitek') || alamat.includes('puspiptek') || alamat.includes('pusitek')) {
+          baseLat = -6.3520; baseLng = 106.6665; color = '#0ea5e9';
+        } else {
+          baseLat = -6.3400; baseLng = 106.6800; color = '#f59e0b';
+        }
+
+        let lat = baseLat;
+        let lng = baseLng;
+
+        if (m.koordinat && m.koordinat.includes(',')) {
+          let coords = m.koordinat.split(',');
+          let parsedLat = parseFloat(coords[0].trim());
+          let parsedLng = parseFloat(coords[1].trim());
+          if (!isNaN(parsedLat) && !isNaN(parsedLng)) {
+            lat = parsedLat;
+            lng = parsedLng;
+          }
+        } else {
+          lat += (Math.random() - 0.5) * 0.005;
+          lng += (Math.random() - 0.5) * 0.005;
+        }
+
+        L.circleMarker([lat, lng], {
+          radius: 6,
+          fillColor: color,
+          color: '#ffffff',
+          weight: 1.5,
+          fillOpacity: 0.95
+        })
+        .addTo(markerLayer)
+        .bindPopup(`
+          <div class="text-sm">
+            <b class="text-slate-800">${m.nama}</b><br>
+            <span class="text-xs text-slate-500">${m.alamat || 'Alamat tidak ditulis'}</span>
+          </div>
+        `);
+      });
+    }
+
+    function renderMonthlyReportCards(deliveries) {
+      const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+      const monthlyData = {};
+      deliveries.forEach(d => {
+        if (!d.tanggal) return;
+        const parts = d.tanggal.split('/');
+        if (parts.length === 3) {
+          const monthIdx = parseInt(parts[1], 10) - 1;
+          const year = parts[2];
+          const key = `${year}-${parts[1]}`;
+          const monthLabel = `${monthNames[monthIdx]} ${year}`;
+
+          if (!monthlyData[key]) {
+            monthlyData[key] = { 
+              label: monthLabel, totalGalon: 0, totalTx: 0, totalOmset: 0,
+              buyers: {}, dailyOmset: {} 
+            };
+          }
+          const qty = Number(d.jumlahGalon || 0);
+          const totalMoney = Number(d.total || 0);
+
+          monthlyData[key].totalTx += 1;
+          monthlyData[key].totalGalon += qty;
+          monthlyData[key].totalOmset += totalMoney;
+
+          const buyerKey = d.nama ? d.nama.trim() : 'Anonim';
+          monthlyData[key].buyers[buyerKey] = (monthlyData[key].buyers[buyerKey] || 0) + qty;
+          monthlyData[key].dailyOmset[d.tanggal] = (monthlyData[key].dailyOmset[d.tanggal] || 0) + totalMoney;
+        }
+      });
+
+      const container = document.getElementById('monthlyReportContainer');
+      container.innerHTML = '';
+      const keys = Object.keys(monthlyData).sort().reverse();
+
+      if (!keys.length) {
+        container.innerHTML = `<div class="glass-card p-8 text-center text-slate-400">Belum ada rekap bulanan.</div>`;
+        return;
+      }
+
+      const totalMemberIncome = (memberData.length || 0) * MEMBERSHIP_PRICE;
+      document.getElementById('reportMembershipIncome').innerText = rupiah(totalMemberIncome);
+
+      keys.forEach(key => {
+        const item = monthlyData[key];
+        const sortedBuyers = Object.keys(item.buyers).map(b => ({ nama: b, qty: item.buyers[b] }))
+                              .sort((a, b) => b.qty - a.qty).slice(0, 3);
+        let topBuyersHtml = '';
+        const medals = ['🥇', '🥈', '🥉'];
+
+        sortedBuyers.forEach((sb, idx) => {
+          topBuyersHtml += `
+            <div class="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100 text-xs">
+              <span class="font-semibold text-slate-700">${medals[idx] || '•'} ${sb.nama}</span>
+              <span class="font-bold text-sky-600">${sb.qty} Galon</span>
+            </div>
+          `;
+        });
+
+        const sortedDaily = Object.keys(item.dailyOmset).map(day => ({ tanggal: day, omset: item.dailyOmset[day] }))
+                             .sort((a, b) => b.omset - a.omset).slice(0, 4);
+        let dailyOmsetHtml = '';
+        sortedDaily.forEach(sd => {
+          dailyOmsetHtml += `
+            <div class="flex items-center justify-between py-1 text-xs text-slate-600 border-b border-dashed border-slate-200">
+              <span>📅 ${sd.tanggal}</span>
+              <span class="font-medium text-emerald-600">${rupiah(sd.omset)}</span>
+            </div>
+          `;
+        });
+
+        container.innerHTML += `
+          <div class="glass-card p-6 border-l-4 border-l-sky-500">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-4 mb-4 gap-2">
+              <div>
+                <span class="text-xs font-bold text-sky-600 uppercase tracking-wider">Periode Laporan</span>
+                <h3 class="text-xl font-bold text-slate-800">${item.label}</h3>
+              </div>
+              <div class="sm:text-right">
+                <span class="text-xs text-slate-400 uppercase font-semibold">Total Omset Galon</span>
+                <h4 class="text-2xl font-bold text-emerald-600">${rupiah(item.totalOmset)}</h4>
+              </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div class="space-y-3">
+                <p class="text-xs font-bold text-slate-400 uppercase">Statistik Penjualan</p>
+                <div class="bg-slate-50 p-3 rounded-xl flex justify-between items-center">
+                  <span class="text-xs text-slate-500">Volume Terjual</span>
+                  <span class="text-sm font-bold text-slate-800">${item.totalGalon} Galon</span>
+                </div>
+                <div class="bg-slate-50 p-3 rounded-xl flex justify-between items-center">
+                  <span class="text-xs text-slate-500">Jumlah Transaksi</span>
+                  <span class="text-sm font-bold text-slate-800">${item.totalTx} Order</span>
+                </div>
+              </div>
+              <div>
+                <p class="text-xs font-bold text-slate-400 uppercase mb-3">🏆 Pembeli Terbanyak</p>
+                <div class="space-y-2">${topBuyersHtml || '<p class="text-xs text-slate-400">Belum ada data</p>'}</div>
+              </div>
+              <div>
+                <p class="text-xs font-bold text-slate-400 uppercase mb-3">📈 Omset Harian Tertinggi</p>
+                <div class="space-y-1 bg-slate-50 p-3 rounded-xl">${dailyOmsetHtml || '<p class="text-xs text-slate-400">Belum ada data</p>'}</div>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    window.onload = function() {
+      loadDashboard();
+      loadMembers();
+      loadDeliveries();
+      loadReport();
+    };
+  </script>
+</body>
+</html>
