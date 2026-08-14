@@ -19,7 +19,7 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <style>
-    body { font-family: 'Poppins', sans-serif; background-color: #f4f7fe; -webkit-user-select: none;  -ms-user-select: none; user-select: none}
+    body { font-family: 'Poppins', sans-serif; background-color: #f4f7fe; -webkit-user-select: none; -ms-user-select: none; user-select: none}
     .glass-card { background: #ffffff; border-radius: 16px; box-shadow: 0 4px 20px -2px rgba(0,0,0,0.03); border: 1px solid #e2e8f0; }
     .sidebar-btn { transition: all 0.25s ease; }
     .sidebar-btn.active { background: #e0f2fe; color: #0284c7; font-weight: 600; border-right: 4px solid #0284c7; }
@@ -100,7 +100,7 @@
             </div>
             <div class="p-3 bg-indigo-50 text-indigo-500 rounded-xl"><i class="fas fa-shipping-fast text-lg"></i></div>
           </div>
-          <p class="text-xs text-slate-400 mt-3">Pemesanan Keseluruhan
+          <p class="text-xs text-slate-400 mt-3">Pemesanan Keseluruhan</p>
         </div>
 
         <div class="glass-card p-5">
@@ -126,9 +126,18 @@
 
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div class="glass-card p-6 lg:col-span-2">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="font-bold text-slate-800">Tren Penjualan Galon Harian</h3>
-            <span class="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full font-medium">Harian</span>
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
+            <div>
+              <h3 class="font-bold text-slate-800 text-lg">Tren Penjualan Galon</h3>
+              <p class="text-xs text-slate-400">Analisis volume penjualan berdasarkan periode</p>
+            </div>
+            
+            <div class="flex items-center space-x-1 bg-slate-100 p-1 rounded-xl text-xs font-medium">
+              <button onclick="changeTrendPeriod('daily')" id="btnTrendDaily" class="trend-btn px-3 py-1.5 rounded-lg transition-all bg-white text-sky-600 shadow-sm font-semibold">Harian</button>
+              <button onclick="changeTrendPeriod('weekly')" id="btnTrendWeekly" class="trend-btn px-3 py-1.5 rounded-lg transition-all text-slate-600 hover:text-slate-900">Mingguan</button>
+              <button onclick="changeTrendPeriod('monthly')" id="btnTrendMonthly" class="trend-btn px-3 py-1.5 rounded-lg transition-all text-slate-600 hover:text-slate-900">Bulanan</button>
+              <button onclick="changeTrendPeriod('yearly')" id="btnTrendYearly" class="trend-btn px-3 py-1.5 rounded-lg transition-all text-slate-600 hover:text-slate-900">Tahunan</button>
+            </div>
           </div>
           <div class="relative h-72">
             <canvas id="chartHistory"></canvas>
@@ -206,11 +215,50 @@
           <h2 class="text-2xl lg:text-3xl font-bold text-slate-800">Data Pemesanan Galon</h2>
           <p class="text-slate-500 text-sm mt-1">Daftar transaksi diurutkan dari yang terbaru</p>
         </div>
-        <div class="relative">
-          <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
-          <input type="text" id="searchDelivery" onkeyup="filterDelivery()" placeholder="Cari nama atau alamat..." class="pl-11 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500 w-full md:w-64 text-sm shadow-sm">
+
+        <div class="flex flex-col sm:flex-row items-center gap-3">
+          <!-- Filter Dropdown Periode / Bulan -->
+          <div class="relative w-full sm:w-auto">
+            <select id="filterDeliveryMonth" onchange="filterDelivery()" class="w-full sm:w-auto pl-4 pr-10 py-2.5 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm shadow-sm font-medium text-slate-700 appearance-none cursor-pointer">
+              <option value="ALL">🗓️ Semua Periode</option>
+            </select>
+            <i class="fas fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+          </div>
+
+          <!-- Input Pencarian -->
+          <div class="relative w-full sm:w-auto">
+            <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+            <input type="text" id="searchDelivery" onkeyup="filterDelivery()" placeholder="Cari nama atau alamat..." class="pl-11 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500 w-full sm:w-64 text-sm shadow-sm">
+          </div>
         </div>
       </header>
+
+      <!-- Ringkasan Eksekutif Hasil Filter (Direktur View) -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <div class="glass-card p-4 flex items-center justify-between border-l-4 border-l-sky-500">
+          <div>
+            <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Transaksi (Filtered)</p>
+            <h4 class="text-xl font-bold text-slate-800 mt-0.5" id="filteredTxCount">0 Order</h4>
+          </div>
+          <div class="p-3 bg-sky-50 text-sky-500 rounded-xl"><i class="fas fa-receipt text-lg"></i></div>
+        </div>
+
+        <div class="glass-card p-4 flex items-center justify-between border-l-4 border-l-indigo-500">
+          <div>
+            <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Volume Galon (Filtered)</p>
+            <h4 class="text-xl font-bold text-slate-800 mt-0.5" id="filteredGalonCount">0 Galon</h4>
+          </div>
+          <div class="p-3 bg-indigo-50 text-indigo-500 rounded-xl"><i class="fas fa-boxes text-lg"></i></div>
+        </div>
+
+        <div class="glass-card p-4 flex items-center justify-between border-l-4 border-l-emerald-500">
+          <div>
+            <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Total Omset (Filtered)</p>
+            <h4 class="text-xl font-bold text-emerald-600 mt-0.5" id="filteredRevenue">Rp 0</h4>
+          </div>
+          <div class="p-3 bg-emerald-50 text-emerald-500 rounded-xl"><i class="fas fa-wallet text-lg"></i></div>
+        </div>
+      </div>
 
       <div class="glass-card overflow-hidden">
         <div class="table-responsive overflow-x-auto">
@@ -285,8 +333,10 @@
     let mapInstance = null;
     let markerLayer = null;
 
-    const MEMBERSHIP_PRICE = 250000;
+    let currentTrendPeriod = 'daily';
+    const monthNamesIndo = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 
+    const MEMBERSHIP_PRICE = 250000;
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx5wK4SjG1L-I1fgXeeHwcy12R9svRc-EtjWjL2djJYH5CjXytyGCbkePkUGb-miW0/exec";
 
     function rupiah(val) {
@@ -314,6 +364,12 @@
       return new Date(0);
     }
 
+    function getWeekLabel(dateObj) {
+      const dayOfMonth = dateObj.getDate();
+      const weekNum = Math.ceil(dayOfMonth / 7);
+      return `Minggu ${weekNum} (${monthNamesIndo[dateObj.getMonth()]} ${dateObj.getFullYear()})`;
+    }
+
     function toggleSidebar() {
       const sb = document.getElementById('sidebar');
       sb.classList.toggle('-translate-x-full');
@@ -337,7 +393,7 @@
       }
     }
 
-    // ================= FUNGSI FETCH UNTUK VERCEL =================
+    // ================= FUNGSI FETCH =================
 
     function loadDashboard() {
       fetch(`${SCRIPT_URL}?action=getDashboard`)
@@ -379,7 +435,11 @@
           deliveryData.sort((a, b) => parseDateDMY(b.tanggal) - parseDateDMY(a.tanggal));
           
           renderDeliveries(deliveryData);
+          updateDeliverySummaryCards(deliveryData);
+          populateDeliveryMonthFilter();
           renderMonthlyReportCards(deliveryData);
+          
+          renderTrendChart();
           updateCharts();
         })
         .catch(err => {
@@ -399,7 +459,7 @@
         .catch(err => console.error("Error loading report:", err));
     }
 
-    // ================= FUNGSI TAMPILAN (TETAP SAMA) =================
+    // ================= FUNGSI TAMPILAN MEMBER =================
 
     function renderMembers(data) {
       const tbody = document.getElementById('tbodyMember');
@@ -435,6 +495,8 @@
       renderMembers(filtered);
     }
 
+    // ================= FUNGSI TAMPILAN PEMESANAN & FILTER =================
+
     function renderDeliveries(data) {
       const tbody = document.getElementById('tbodyDelivery');
       if (!data || !data.length) {
@@ -469,13 +531,166 @@
       tbody.innerHTML = html;
     }
 
+    function populateDeliveryMonthFilter() {
+      const select = document.getElementById('filterDeliveryMonth');
+      if (!select) return;
+
+      const periods = new Set();
+      deliveryData.forEach(d => {
+        const dt = parseDateDMY(d.tanggal);
+        if (dt && !isNaN(dt.getTime())) {
+          const key = `${monthNamesIndo[dt.getMonth()]} ${dt.getFullYear()}`;
+          periods.add(key);
+        }
+      });
+
+      let html = `<option value="ALL">🗓️ Semua Periode</option>`;
+      periods.forEach(p => {
+        html += `<option value="${p}">${p}</option>`;
+      });
+      select.innerHTML = html;
+    }
+
     function filterDelivery() {
       const kw = document.getElementById('searchDelivery').value.toLowerCase();
-      const filtered = deliveryData.filter(d => 
-        String(d.nama).toLowerCase().includes(kw) || 
-        String(d.alamat).toLowerCase().includes(kw)
-      );
+      const selectedPeriod = document.getElementById('filterDeliveryMonth')?.value || 'ALL';
+
+      const filtered = deliveryData.filter(d => {
+        const matchText = String(d.nama || '').toLowerCase().includes(kw) || 
+                          String(d.alamat || '').toLowerCase().includes(kw);
+
+        let matchPeriod = true;
+        if (selectedPeriod !== 'ALL') {
+          const dt = parseDateDMY(d.tanggal);
+          if (dt && !isNaN(dt.getTime())) {
+            const periodKey = `${monthNamesIndo[dt.getMonth()]} ${dt.getFullYear()}`;
+            matchPeriod = (periodKey === selectedPeriod);
+          } else {
+            matchPeriod = false;
+          }
+        }
+
+        return matchText && matchPeriod;
+      });
+
       renderDeliveries(filtered);
+      updateDeliverySummaryCards(filtered);
+    }
+
+    function updateDeliverySummaryCards(filteredData) {
+      let totalTx = filteredData.length;
+      let totalGalon = 0;
+      let totalOmset = 0;
+
+      filteredData.forEach(d => {
+        totalGalon += Number(d.jumlahGalon || 0);
+        totalOmset += Number(d.total || 0);
+      });
+
+      if (document.getElementById('filteredTxCount')) {
+        document.getElementById('filteredTxCount').innerText = `${totalTx} Order`;
+      }
+      if (document.getElementById('filteredGalonCount')) {
+        document.getElementById('filteredGalonCount').innerText = `${totalGalon} Galon`;
+      }
+      if (document.getElementById('filteredRevenue')) {
+        document.getElementById('filteredRevenue').innerText = rupiah(totalOmset);
+      }
+    }
+
+    // ================= FUNGSI GRAFIK TREN (PERIODE TOGGLE) =================
+
+    function changeTrendPeriod(period) {
+      currentTrendPeriod = period;
+
+      document.querySelectorAll('.trend-btn').forEach(btn => {
+        btn.classList.remove('bg-white', 'text-sky-600', 'shadow-sm', 'font-semibold');
+        btn.classList.add('text-slate-600');
+      });
+
+      const activeBtn = document.getElementById(`btnTrend${period.charAt(0).toUpperCase() + period.slice(1)}`);
+      if (activeBtn) {
+        activeBtn.classList.remove('text-slate-600');
+        activeBtn.classList.add('bg-white', 'text-sky-600', 'shadow-sm', 'font-semibold');
+      }
+
+      renderTrendChart();
+    }
+
+    function renderTrendChart() {
+      if (!deliveryData || !deliveryData.length) return;
+
+      const groupedData = {};
+      const sortedData = [...deliveryData].sort((a, b) => parseDateDMY(a.tanggal) - parseDateDMY(b.tanggal));
+
+      sortedData.forEach(d => {
+        const dt = parseDateDMY(d.tanggal);
+        if (!dt || isNaN(dt.getTime())) return;
+
+        let key = '';
+        if (currentTrendPeriod === 'daily') {
+          key = d.tanggal;
+        } else if (currentTrendPeriod === 'weekly') {
+          key = getWeekLabel(dt);
+        } else if (currentTrendPeriod === 'monthly') {
+          key = `${monthNamesIndo[dt.getMonth()]} ${dt.getFullYear()}`;
+        } else if (currentTrendPeriod === 'yearly') {
+          key = `${dt.getFullYear()}`;
+        }
+
+        groupedData[key] = (groupedData[key] || 0) + Number(d.jumlahGalon || 0);
+      });
+
+      let labels = Object.keys(groupedData);
+      let values = Object.values(groupedData);
+
+      if (currentTrendPeriod === 'daily' && labels.length > 14) {
+        labels = labels.slice(-14);
+        values = values.slice(-14);
+      } else if (currentTrendPeriod === 'weekly' && labels.length > 8) {
+        labels = labels.slice(-8);
+        values = values.slice(-8);
+      }
+
+      if (chartInstances.history) chartInstances.history.destroy();
+
+      const ctx = document.getElementById('chartHistory').getContext('2d');
+      chartInstances.history = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Galon Terjual',
+            data: values,
+            borderColor: '#0284c7',
+            backgroundColor: 'rgba(2, 132, 199, 0.08)',
+            borderWidth: 3,
+            fill: true,
+            tension: 0.35,
+            pointBackgroundColor: '#ffffff',
+            pointBorderColor: '#0284c7',
+            pointBorderWidth: 2,
+            pointRadius: 5,
+            pointHoverRadius: 7
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => ` Terjual: ${ctx.parsed.y} Galon`
+              }
+            }
+          },
+          scales: {
+            y: { beginAtZero: true, grid: { borderDash: [4, 4] } },
+            x: { grid: { display: false } }
+          }
+        }
+      });
     }
 
     function getAggregatedMemberPurchases() {
@@ -511,46 +726,8 @@
     }
 
     function updateCharts() {
-      if (!deliveryData.length) return;
-
       Chart.defaults.font.family = 'Poppins';
       Chart.defaults.color = '#64748b';
-
-      const dateMap = {};
-      const sortedForChart = [...deliveryData].reverse();
-      sortedForChart.forEach(d => {
-        if (d.tanggal) {
-          dateMap[d.tanggal] = (dateMap[d.tanggal] || 0) + Number(d.jumlahGalon || 0);
-        }
-      });
-      const dates = Object.keys(dateMap).slice(-12);
-      const galonCounts = dates.map(dt => dateMap[dt]);
-
-      if (chartInstances.history) chartInstances.history.destroy();
-      chartInstances.history = new Chart(document.getElementById('chartHistory'), {
-        type: 'line',
-        data: {
-          labels: dates,
-          datasets: [{
-            label: 'Galon Terjual',
-            data: galonCounts,
-            borderColor: '#0284c7',
-            backgroundColor: 'rgba(2, 132, 199, 0.08)',
-            borderWidth: 3,
-            fill: true,
-            tension: 0.35,
-            pointBackgroundColor: '#ffffff',
-            pointBorderColor: '#0284c7',
-            pointBorderWidth: 2,
-            pointRadius: 4
-          }]
-        },
-        options: {
-          responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
-          scales: { y: { beginAtZero: true, grid: { borderDash: [4, 4] } }, x: { grid: { display: false } } }
-        }
-      });
 
       const topMembers = getAggregatedMemberPurchases();
       const top5 = topMembers.slice(0, 5);
@@ -676,7 +853,6 @@
     }
 
     function renderMonthlyReportCards(deliveries) {
-      const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
       const monthlyData = {};
       deliveries.forEach(d => {
         if (!d.tanggal) return;
@@ -685,7 +861,7 @@
           const monthIdx = parseInt(parts[1], 10) - 1;
           const year = parts[2];
           const key = `${year}-${parts[1]}`;
-          const monthLabel = `${monthNames[monthIdx]} ${year}`;
+          const monthLabel = `${monthNamesIndo[monthIdx]} ${year}`;
 
           if (!monthlyData[key]) {
             monthlyData[key] = { 
@@ -790,17 +966,18 @@
       loadDeliveries();
       loadReport();
     };
-    // Mematikan Klik Kanan
-  document.addEventListener('contextmenu', function(e) {
-    e.preventDefault();
-  });
 
-  // Mematikan Shortcut Copy (Ctrl+C / Cmd+C) & Cut (Ctrl+X)
-  document.addEventListener('keydown', function(e) {
-    if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C' || e.key === 'x' || e.key === 'X')) {
+    // Mematikan Klik Kanan
+    document.addEventListener('contextmenu', function(e) {
       e.preventDefault();
-    }
-  });
+    });
+
+    // Mematikan Shortcut Copy (Ctrl+C / Cmd+C) & Cut (Ctrl+X)
+    document.addEventListener('keydown', function(e) {
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C' || e.key === 'x' || e.key === 'X')) {
+        e.preventDefault();
+      }
+    });
   </script>
 </body>
 </html>
